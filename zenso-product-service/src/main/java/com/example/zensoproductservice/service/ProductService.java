@@ -1,5 +1,8 @@
 package com.example.zensoproductservice.service;
 
+import com.example.zensoproductservice.dto.ProductRequestDTO;
+import com.example.zensoproductservice.dto.ProductResponseDTO;
+import com.example.zensoproductservice.mapper.ProductMapper;
 import com.example.zensoproductservice.model.Product;
 import com.example.zensoproductservice.model.Review;
 import com.example.zensoproductservice.repository.ProductRepository;
@@ -10,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 @Service
 public class ProductService {
 
@@ -20,78 +22,68 @@ public class ProductService {
     @Autowired
     private ReviewRepository reviewRepo;
 
-    // --- 1.FETCH ALL ---
-    public List<Product> getAllProducts() {
+    @Autowired
+    private ProductMapper productMapper;
+
+    // 1. FETCH ALL
+    public List<ProductResponseDTO> getAllProducts() {
         List<Product> products = productRepo.findAll();
-        if (products.isEmpty()) return products;
+        if (products.isEmpty()) return List.of();
 
-        // Step A: Collect all Product IDs
         List<String> productIds = products.stream().map(Product::getId).toList();
-
-        // Step B: Fetch ALL related reviews in ONE database query
         List<Review> allReviews = reviewRepo.findByProductIdIn(productIds);
 
-        // Step C: Group reviews by Product ID in memory
-        Map<String, List<Review>> reviewsMap = allReviews.stream()
-                .collect(Collectors.groupingBy(Review::getProductId));
+        Map<String, List<Review>> reviewsMap =
+                allReviews.stream().collect(Collectors.groupingBy(Review::getProductId));
 
-        // Step D: Attach reviews and calculate rating
-        for (Product product : products) {
-            List<Review> productReviews = reviewsMap.getOrDefault(product.getId(), List.of());
-            product.setReviews(productReviews);
-            product.setAverageRating(calculateAverage(productReviews));
-        }
+        return products.stream().map(product -> {
+            List<Review> reviews = reviewsMap.getOrDefault(product.getId(), List.of());
+            double avg = calculateAverage(reviews);
 
-        return products;
+            return productMapper.toResponseDTO(product, reviews, avg);
+        }).toList();
     }
 
-    // --- 2. GET SINGLE PRODUCT ---
-    public Product getProductById(String id) {
+    // 2. GET SINGLE
+    public ProductResponseDTO getProductById(String id) {
         Product product = productRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found with ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Fetch reviews specifically for this product
         List<Review> reviews = reviewRepo.findByProductId(id);
-        product.setReviews(reviews);
-        product.setAverageRating(calculateAverage(reviews));
-
-        return product;
+        return productMapper.toResponseDTO(product, reviews, calculateAverage(reviews));
     }
 
-    // --- 3. CREATE ---
-    public Product postProduct(Product product) {
-        // Initialize with 0 rating
+    // 3. CREATE
+    public Product postProduct(ProductRequestDTO dto) {
+        Product product = productMapper.toEntity(dto);
         product.setAverageRating(0.0);
         return productRepo.save(product);
     }
 
-    // --- 4. UPDATE ---
-    public Product updateProduct(String id, Product updatedProduct) {
-        Product existingProduct = getProductById(id); // Re-use logic to ensure it exists
+    // 4. UPDATE
+    public Product updateProduct(String id, ProductRequestDTO dto) {
+        Product product = productRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        existingProduct.setProductName(updatedProduct.getProductName());
-        existingProduct.setPrice(updatedProduct.getPrice());
-        existingProduct.setDescription(updatedProduct.getDescription());
-        existingProduct.setAttributes(updatedProduct.getAttributes());
+        if (dto.getProductName() != null) product.setProductName(dto.getProductName());
+        if (dto.getDescription() != null) product.setDescription(dto.getDescription());
+        if (dto.getPrice() != null) product.setPrice(dto.getPrice());
+        if (dto.getAttributes() != null) product.setAttributes(dto.getAttributes());
 
-
-        return productRepo.save(existingProduct);
+        return productRepo.save(product);
     }
 
-    // --- 5. DELETE (Cascading) ---
+    // 5. DELETE
     public void deleteProduct(String id) {
         if (!productRepo.existsById(id)) {
-            throw new RuntimeException("Product not found with ID: " + id);
+            throw new RuntimeException("Product not found");
         }
-        // SAFETY: Delete all reviews for this product first so we don't have orphan data
         reviewRepo.deleteByProductId(id);
         productRepo.deleteById(id);
     }
 
-    // Helper Method
     private double calculateAverage(List<Review> reviews) {
         if (reviews == null || reviews.isEmpty()) return 0.0;
-        double sum = reviews.stream().mapToDouble(Review::getRating).sum();
-        return sum / reviews.size();
+        return reviews.stream().mapToDouble(Review::getRating).average().orElse(0.0);
     }
 }
