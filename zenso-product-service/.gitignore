@@ -1,33 +1,98 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+####################################
+# Java
+####################################
+*.class
+*.log
+*.ctxt
+hs_err_pid*
 
-### STS ###
+####################################
+# Maven
+####################################
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+.mvn/wrapper/maven-wrapper.bat
+
+####################################
+# Gradle
+####################################
+build/
+.gradle/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+####################################
+# Spring Boot
+####################################
+HELP.md
+*.jar
+*.war
+*.ear
+*.pid
+
+####################################
+# Docker
+####################################
+.env
+.env.*
+docker-compose.override.yml
+*.tar
+*.pid
+
+####################################
+# Spring Config (Microservices Safe)
+####################################
+# Commit base config
+# Ignore env-specific configs
+**/src/main/resources/application-dev.properties
+**/src/main/resources/application-prod.properties
+**/src/main/resources/application-test.properties
+**/src/main/resources/application-*.yml
+src/main/resources/application.properties
+
+####################################
+# IntelliJ IDEA
+####################################
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+####################################
+# Eclipse / STS
+####################################
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
-.sts4-cache
+.sts4-cache/
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+####################################
+# VS Code
+####################################
+.vscode/
 
-### NetBeans ###
+####################################
+# NetBeans
+####################################
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
-.vscode/
+####################################
+# OS files
+####################################
+.DS_Store
+Thumbs.db
+
+####################################
+# Logs
+####################################
+logs/
+*.log
