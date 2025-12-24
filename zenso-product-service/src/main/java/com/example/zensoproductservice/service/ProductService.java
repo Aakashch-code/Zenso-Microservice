@@ -20,7 +20,7 @@ public class ProductService {
     @Autowired
     private ReviewRepository reviewRepo;
 
-    // --- 1. OPTIMIZED FETCH ALL (Solves N+1 Problem) ---
+    // --- 1.FETCH ALL ---
     public List<Product> getAllProducts() {
         List<Product> products = productRepo.findAll();
         if (products.isEmpty()) return products;
@@ -69,12 +69,11 @@ public class ProductService {
     public Product updateProduct(String id, Product updatedProduct) {
         Product existingProduct = getProductById(id); // Re-use logic to ensure it exists
 
-        // Update fields (In a real app, use a Mapper)
         existingProduct.setProductName(updatedProduct.getProductName());
         existingProduct.setPrice(updatedProduct.getPrice());
         existingProduct.setDescription(updatedProduct.getDescription());
         existingProduct.setAttributes(updatedProduct.getAttributes());
-        // Don't overwrite ID or Reviews here usually
+
 
         return productRepo.save(existingProduct);
     }
