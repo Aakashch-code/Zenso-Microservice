@@ -1,5 +1,8 @@
 package com.example.zensoproductservice.service;
 
+import com.example.zensoproductservice.dto.ReviewRequestDTO;
+import com.example.zensoproductservice.dto.ReviewResponseDTO;
+import com.example.zensoproductservice.mapper.ReviewMapper;
 import com.example.zensoproductservice.model.Review;
 import com.example.zensoproductservice.repository.ProductRepository;
 import com.example.zensoproductservice.repository.ReviewRepository;
@@ -7,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
 @Service
 public class ReviewService {
 
@@ -17,51 +19,44 @@ public class ReviewService {
     @Autowired
     private ProductRepository productRepo;
 
-    // 1. Get all reviews (Admin use only usually)
-    public List<Review> getAllReviews() {
-        return reviewRepo.findAll();
+    @Autowired
+    private ReviewMapper reviewMapper;
+
+    public List<ReviewResponseDTO> getAllReviews() {
+        return reviewRepo.findAll()
+                .stream()
+                .map(reviewMapper::toResponseDTO)
+                .toList();
     }
 
-    // 2. NEW: Get reviews specifically for one product
-    public List<Review> getReviewsByProductId(String productId) {
-        return reviewRepo.findByProductId(productId); // You need to ensure this method exists in your Repository
+    public List<ReviewResponseDTO> getReviewsByProductId(String productId) {
+        return reviewRepo.findByProductId(productId)
+                .stream()
+                .map(reviewMapper::toResponseDTO)
+                .toList();
     }
 
-    // 3. Create Review
-    public Review createReview(Review review, String productId) {
-        // Validation: Check if product exists
+    public Review createReview(ReviewRequestDTO dto, String productId) {
         if (!productRepo.existsById(productId)) {
-            throw new RuntimeException("Cannot review non-existent product: " + productId);
+            throw new RuntimeException("Cannot review non-existent product");
         }
 
+        Review review = reviewMapper.toEntity(dto);
         review.setProductId(productId);
         return reviewRepo.save(review);
     }
 
-    public Review getReviewById(String id) {
-        return reviewRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Review not found with id: " + id));
-    }
+    public Review updateReview(ReviewRequestDTO dto, String id) {
+        Review review = reviewRepo.findById(id)
+                .orElseThrow(() -> new RuntimeException("Review not found"));
 
-    public Review updateReview(Review review, String id) {
-        Review existingReview = getReviewById(id);
+        if (dto.getComment() != null) review.setComment(dto.getComment());
+        if (dto.getRating() != null) review.setRating(dto.getRating());
 
-        if (review.getComment() != null) {
-            existingReview.setComment(review.getComment());
-        }
-
-        // Use strict check for rating (0 can be a valid rating in some systems, check your logic)
-        if (review.getRating() != null) {
-            existingReview.setRating(review.getRating());
-        }
-
-        return reviewRepo.save(existingReview);
+        return reviewRepo.save(review);
     }
 
     public void deleteReviewById(String id) {
-        if (!reviewRepo.existsById(id)) {
-            throw new RuntimeException("Cannot delete. Review not found: " + id);
-        }
         reviewRepo.deleteById(id);
     }
 }
